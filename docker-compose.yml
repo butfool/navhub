@@ -1,0 +1,11 @@
+services:
+  app:
+    image: ghcr.io/butfool/navhub:latest
+    container_name: navhub
+    ports:
+      - "${PORT:-57529}:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=file:./data/db.sqlite
+    restart: unless-stopped

@@ -167,7 +167,7 @@ The API returns JSON. Write endpoints validate required fields and reject danger
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+Apache 2.0. See [LICENSE](./LICENSE).
 
 ---
 
@@ -254,4 +254,4 @@ cp ./data/db.sqlite ./data/db.sqlite.backup
 
 ### 许可证
 
-MIT，详见 [LICENSE](./LICENSE)。
+Apache 2.0，详见 [LICENSE](./LICENSE)。

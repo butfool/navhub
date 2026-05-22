@@ -24,6 +24,14 @@
 .DS_Store
 *.pem
 *.local
+
+# local databases
+dev.db
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+data/
 /local/prisma/dev.db
 /local/prisma/dev.db-journal
 

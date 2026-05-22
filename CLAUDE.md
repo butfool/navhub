@@ -33,9 +33,17 @@ npx prisma migrate dev # Run migrations
 - Deleting a category cascades and removes all its services
 
 ### Key Files
-- `src/app/page.tsx` - Main dashboard page (client component), uses `useTheme` and `useData` hooks
-- `src/app/components/` - UI components (CategorySection, ServiceModal, CategoryModal, IconColorPicker, types, ui/)
-- `src/app/api/categories/route.ts` - API handler for categories (includes services in responses)
+- `src/app/page.tsx` - Dashboard page composition, delegates to hooks and components
+- `src/app/hooks/use-theme.ts` - Theme state and system preference listening
+- `src/app/hooks/use-nav-data.ts` - Category/service CRUD, reordering, and loading
+- `src/app/lib/api-client.ts` - Browser-side fetch wrapper for categories and services APIs
+- `src/app/types.ts` - Shared TypeScript types for Category and Service
+- `src/app/components/nav/` - Dashboard-specific UI components (CategorySection)
+- `src/app/components/dialogs/` - ServiceModal, CategoryModal, IconColorPicker
+- `src/app/components/ui/` - shadcn/ui-style primitives (button, dialog, input, etc.)
+- `src/app/api/categories/route.ts` - REST API for Category CRUD, includes nested services
+- `src/app/api/services/route.ts` - REST API for Service CRUD
+- `src/app/api/utils.ts` - Input validation helpers and Prisma error mapping
 - `src/app/globals.css` - Global CSS with Tailwind v4 and CSS variables for theming
 - `src/lib/utils.ts` - `cn()` utility for Tailwind class merging
 - `src/lib/color.ts` - Color helpers (hexToRgba, rgbaToHex, rgbaToForeground, rgbaToGradient)
@@ -74,9 +82,11 @@ The SQLite database is persisted at `./data/db.sqlite` via Docker volume.
 
 **No tests currently exist** in this codebase.
 
+**CI**: PRs and pushes to `master` run lint and build via `.github/workflows/ci.yml`. The Docker workflow builds and pushes to GHCR on push to `master`.
+
 **Database**: Uses SQLite. Path configured via `DATABASE_URL` env var (format: `file:./dev.db`). Docker default: `file:./data/db.sqlite`.
 
-**Standalone output**: `next.config.ts` has `output: 'standalone'` for Docker deployment. The Dockerfile uses a multi-stage build; the runner stage only includes the standalone output + runtime deps. Also configures `allowedDevOrigins` for Tailscale dev access (`echo.tail9719d4.ts.net`).
+**Standalone output**: `next.config.ts` has `output: 'standalone'` for Docker deployment. The Dockerfile uses a multi-stage build; the runner stage only includes the standalone output + runtime deps.
 
 **Animation**: Uses `motion` (v12, formerly framer-motion) for card, modal, and layout animations. CSS variables define motion tokens (`--ease-spring-soft`, `--dur-base`, etc.) used in `globals.css`.
 

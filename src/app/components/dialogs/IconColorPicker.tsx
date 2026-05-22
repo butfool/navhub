@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { searchIcons, getIconSvg, TOTAL_ICON_COUNT, type IconSearchResult } from '@/lib/icons';
 import { hexToRgba, rgbaToHex, rgbaToForeground } from '@/lib/color';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { cn } from '@/lib/utils';
 
 interface IconColorPickerProps {

@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "NavHub",
-  description: "导航站",
+  description: "A lightweight self-hosted navigation dashboard for organizing web services.",
 };
 
 const themeScript = `

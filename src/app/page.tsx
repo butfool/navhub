@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { AnimatePresence } from 'motion/react';
 import {
@@ -13,17 +13,16 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Service, Category } from './components/types';
-import { CategorySection } from './components/CategorySection';
-import { ServiceModal } from './components/ServiceModal';
-import { CategoryModal } from './components/CategoryModal';
-
-// --- Modal state machine ---
+import { CategorySection } from './components/nav/CategorySection';
+import { ServiceModal } from './components/dialogs/ServiceModal';
+import { CategoryModal } from './components/dialogs/CategoryModal';
+import { useNavData } from './hooks/use-nav-data';
+import { useTheme } from './hooks/use-theme';
+import { Service, Category } from './types';
 
 type ModalState =
   | { type: 'closed' }
@@ -31,71 +30,16 @@ type ModalState =
   | { type: 'newCategory' }
   | { type: 'editCategory'; category: Category };
 
-// --- Theme hook ---
-
-function useTheme() {
-  const [theme, setTheme] = useState<'dark' | 'light' | 'auto'>('auto');
-
-  useEffect(() => {
-    const stored = localStorage.getItem('theme') as 'dark' | 'light' | 'auto' | null;
-    const initial = stored || 'auto';
-    setTheme(initial);
-    applyTheme(initial);
-
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e: MediaQueryListEvent) => {
-      if (localStorage.getItem('theme') === 'auto' || !localStorage.getItem('theme')) {
-        document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
-      }
-    };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-
-  const changeTheme = (t: 'dark' | 'light' | 'auto') => {
-    setTheme(t);
-    localStorage.setItem('theme', t);
-    applyTheme(t);
-  };
-
-  return { theme, changeTheme };
-}
-
-function applyTheme(t: 'dark' | 'light' | 'auto') {
-  const resolved = t === 'auto'
-    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    : t;
-  document.documentElement.setAttribute('data-theme', resolved);
-}
-
-// --- Data hook ---
-
-function useData() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await fetch('/api/categories');
-      if (!res.ok) throw new Error('Failed to fetch');
-      const data = await res.json();
-      setCategories(data);
-    } catch (err) {
-      console.error('Failed to fetch categories:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-
-  return { categories, setCategories, fetchCategories, loading };
-}
-
 export default function HomePage() {
-  const { categories, setCategories, fetchCategories, loading } = useData();
+  const {
+    categories,
+    loading,
+    saveService,
+    removeService,
+    saveCategory,
+    reorderCategories,
+    reorderServices,
+  } = useNavData();
   const { theme, changeTheme } = useTheme();
   const [editMode, setEditMode] = useState(false);
   const [modal, setModal] = useState<ModalState>({ type: 'closed' });
@@ -112,26 +56,11 @@ export default function HomePage() {
     document.body.dataset.editMode = editMode ? 'true' : 'false';
   }, [editMode]);
 
-  // --- Mutations ---
-
   const handleSaveService = async (service: Partial<Service>) => {
     setSaving(true);
     try {
-      if (service.id) {
-        await fetch('/api/services', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(service),
-        });
-      } else {
-        await fetch('/api/services', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(service),
-        });
-      }
+      await saveService(service);
       setModal({ type: 'closed' });
-      await fetchCategories();
     } catch (err) {
       console.error('Failed to save service:', err);
     } finally {
@@ -141,31 +70,17 @@ export default function HomePage() {
 
   const handleDeleteService = async (id: string) => {
     try {
-      await fetch(`/api/services?id=${id}`, { method: 'DELETE' });
-      await fetchCategories();
+      await removeService(id);
     } catch (err) {
       console.error('Failed to delete service:', err);
     }
   };
 
-  const handleSaveCategory = async (data: Partial<Category>) => {
+  const handleSaveCategory = async (category: Partial<Category>) => {
     setSaving(true);
     try {
-      if (data.id) {
-        await fetch('/api/categories', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-      } else {
-        await fetch('/api/categories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-      }
+      await saveCategory(category);
       setModal({ type: 'closed' });
-      await fetchCategories();
     } catch (err) {
       console.error('Failed to save category:', err);
     } finally {
@@ -176,56 +91,8 @@ export default function HomePage() {
   const handleCategoryDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-
-    const oldIndex = categories.findIndex(c => c.id === active.id);
-    const newIndex = categories.findIndex(c => c.id === over.id);
-    const reordered = arrayMove(categories, oldIndex, newIndex);
-
-    setCategories(reordered);
-    try {
-      await Promise.all(reordered.map((cat, i) =>
-        fetch('/api/categories', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: cat.id, order: i }),
-        })
-      ));
-    } catch (err) {
-      console.error('Failed to reorder categories:', err);
-      fetchCategories();
-    }
+    await reorderCategories(active.id as string, over.id as string);
   };
-
-  const handleServiceDragEnd = async (categoryId: string, activeId: string, overId: string) => {
-    const cat = categories.find(c => c.id === categoryId);
-    if (!cat?.services) return;
-
-    const services = cat.services;
-    const oldIndex = services.findIndex(s => s.id === activeId);
-    const newIndex = services.findIndex(s => s.id === overId);
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    const reordered = arrayMove(services, oldIndex, newIndex);
-
-    setCategories(prev => prev.map(c =>
-      c.id === categoryId ? { ...c, services: reordered } : c
-    ));
-
-    try {
-      await Promise.all(reordered.map((svc, i) =>
-        fetch('/api/services', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: svc.id, order: i }),
-        })
-      ));
-    } catch (err) {
-      console.error('Failed to reorder services:', err);
-      fetchCategories();
-    }
-  };
-
-  // --- Derived data ---
 
   const categoryData = useMemo(() =>
     categories.slice().sort((a, b) => a.order - b.order),
@@ -258,7 +125,7 @@ export default function HomePage() {
           <div className="island-divider" />
           <button
             className={`theme-btn ${editMode ? 'active' : ''}`}
-            onClick={() => setEditMode(v => !v)}
+            onClick={() => setEditMode(value => !value)}
             title={editMode ? '完成编辑' : '编辑'}
             style={{ width: 32, height: 32 }}
           >
@@ -290,25 +157,25 @@ export default function HomePage() {
             onDragEnd={handleCategoryDragEnd}
           >
             <SortableContext
-              items={categoryData.map(c => c.id)}
+              items={categoryData.map(category => category.id)}
               strategy={verticalListSortingStrategy}
             >
               <AnimatePresence mode="popLayout" initial={false}>
-                {categoryData.map((cat, i) => (
+                {categoryData.map((category, index) => (
                   <CategorySection
-                    key={cat.id}
-                    id={cat.id}
-                    name={cat.name}
-                    icon={cat.icon}
-                    color={cat.color}
-                    services={cat.services ?? []}
+                    key={category.id}
+                    id={category.id}
+                    name={category.name}
+                    icon={category.icon}
+                    color={category.color}
+                    services={category.services ?? []}
                     editMode={editMode}
-                    index={i}
-                    onEdit={(svc) => setModal({ type: 'editService', service: svc })}
+                    index={index}
+                    onEdit={(service) => setModal({ type: 'editService', service })}
                     onDelete={handleDeleteService}
-                    onEditCategory={() => setModal({ type: 'editCategory', category: cat })}
-                    onAddService={() => setModal({ type: 'editService', categoryId: cat.id })}
-                    onServiceDragEnd={handleServiceDragEnd}
+                    onEditCategory={() => setModal({ type: 'editCategory', category })}
+                    onAddService={() => setModal({ type: 'editService', categoryId: category.id })}
+                    onServiceDragEnd={reorderServices}
                   />
                 ))}
               </AnimatePresence>

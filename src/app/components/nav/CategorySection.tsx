@@ -18,7 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Service } from './types';
+import { Service } from '../../types';
 import { getIconSvg } from '@/lib/icons';
 import { rgbaToForeground, rgbaToGradient } from '@/lib/color';
 

@@ -67,9 +67,9 @@ function ServiceModalForm({
 
   const handleSubmit = () => {
     const newErrors: typeof errors = {};
-    if (!name.trim()) newErrors.name = '名称不能为空';
-    if (!categoryId) newErrors.categoryId = '分类不能为空';
-    if (!url.trim()) newErrors.url = 'URL 不能为空';
+    if (!name.trim()) newErrors.name = 'Name is required';
+    if (!categoryId) newErrors.categoryId = 'Category is required';
+    if (!url.trim()) newErrors.url = 'URL is required';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
     onSave({ id: service?.id, name, categoryId, url, description, icon, color });
@@ -78,18 +78,18 @@ function ServiceModalForm({
   return (
     <DialogContent className="sm:max-w-[520px] p-8 gap-6">
       <DialogHeader>
-        <DialogTitle>{service ? '编辑服务' : '添加服务'}</DialogTitle>
+        <DialogTitle>{service ? 'Edit service' : 'Add service'}</DialogTitle>
       </DialogHeader>
 
       <div className="space-y-5 py-1">
         <div className="grid grid-cols-[88px_1fr] items-center gap-x-4">
-          <Label htmlFor="name" className="text-muted-foreground font-normal">服务名称</Label>
+          <Label htmlFor="name" className="text-muted-foreground font-normal">Name</Label>
           <div className="space-y-1">
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="输入服务名称"
+              placeholder="Enter service name"
               aria-invalid={!!errors.name}
             />
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
@@ -97,7 +97,7 @@ function ServiceModalForm({
         </div>
 
         <div className="grid grid-cols-[88px_1fr] items-center gap-x-4">
-          <Label htmlFor="category" className="text-muted-foreground font-normal">分类</Label>
+          <Label htmlFor="category" className="text-muted-foreground font-normal">Category</Label>
           <div className="space-y-1">
             <select
               id="category"
@@ -106,7 +106,7 @@ function ServiceModalForm({
               className="flex h-9 w-full rounded-md border border-border bg-card px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-invalid={!!errors.categoryId}
             >
-              <option value="" disabled>选择分类</option>
+              <option value="" disabled>Select category</option>
               {categories.map(category => (
                 <option key={category.id} value={category.id}>{category.name}</option>
               ))}
@@ -116,7 +116,7 @@ function ServiceModalForm({
         </div>
 
         <div className="grid grid-cols-[88px_1fr] items-center gap-x-4">
-          <Label htmlFor="url" className="text-muted-foreground font-normal">URL 地址</Label>
+          <Label htmlFor="url" className="text-muted-foreground font-normal">URL</Label>
           <div className="space-y-1">
             <Input
               id="url"
@@ -131,25 +131,25 @@ function ServiceModalForm({
         </div>
 
         <div className="grid grid-cols-[88px_1fr] items-start gap-x-4">
-          <Label htmlFor="description" className="text-muted-foreground font-normal pt-2">描述</Label>
+          <Label htmlFor="description" className="text-muted-foreground font-normal pt-2">Description</Label>
           <Textarea
             id="description"
             value={description ?? ''}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="可选,简短描述这个服务的用途"
+            placeholder="Optional, short description of what this service does"
             rows={2}
           />
         </div>
 
         <div className="grid grid-cols-[88px_1fr] items-center gap-x-4">
-          <Label className="text-muted-foreground font-normal">外观</Label>
+          <Label className="text-muted-foreground font-normal">Appearance</Label>
           <IconColorPicker icon={icon} color={color} onChange={({ icon: nextIcon, color: nextColor }) => { setIcon(nextIcon); setColor(nextColor); }} />
         </div>
       </div>
 
       <DialogFooter className="pt-2">
-        <Button variant="outline" onClick={onClose} disabled={saving}>取消</Button>
-        <Button onClick={handleSubmit} disabled={saving}>{saving ? '保存中…' : '保存'}</Button>
+        <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={handleSubmit} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
       </DialogFooter>
     </DialogContent>
   );

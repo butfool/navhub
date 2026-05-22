@@ -106,7 +106,7 @@ export function IconColorPicker({ icon, color, onChange }: IconColorPickerProps)
           })}
           <label
             className="relative w-6 h-6 rounded-full border border-dashed border-border cursor-pointer flex items-center justify-center hover:bg-accent ml-auto"
-            title="自定义颜色"
+            title="Custom color"
           >
             <svg className="w-3.5 h-3.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
@@ -140,7 +140,7 @@ export function IconColorPicker({ icon, color, onChange }: IconColorPickerProps)
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={`搜索 ${TOTAL_ICON_COUNT}+ 图标…`}
+            placeholder={`Search ${TOTAL_ICON_COUNT}+ icons…`}
             className="w-full h-9 pl-8 pr-3 text-sm rounded-md border border-border bg-card focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
@@ -148,7 +148,7 @@ export function IconColorPicker({ icon, color, onChange }: IconColorPickerProps)
         {/* Icon grid */}
         {results.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
-            未找到匹配的图标
+            No matching icons found
           </div>
         ) : (
           <>
@@ -190,12 +190,12 @@ export function IconColorPicker({ icon, color, onChange }: IconColorPickerProps)
             </div>
             {!search && (
               <p className="mt-2 text-[11px] text-muted-foreground text-center">
-                显示常用图标 · 输入名称搜索全部 {TOTAL_ICON_COUNT} 个
+                Showing common icons — type to search all {TOTAL_ICON_COUNT}
               </p>
             )}
             {search && results.length === PAGE_SIZE && (
               <p className="mt-2 text-[11px] text-muted-foreground text-center">
-                显示前 {PAGE_SIZE} 个结果 · 继续输入以缩小范围
+                Showing first {PAGE_SIZE} results — keep typing to narrow down
               </p>
             )}
           </>

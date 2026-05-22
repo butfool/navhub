@@ -49,7 +49,7 @@ function CategoryModalForm({
 
   const handleSubmit = () => {
     const newErrors: typeof errors = {};
-    if (!name.trim()) newErrors.name = '名称不能为空';
+    if (!name.trim()) newErrors.name = 'Name is required';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
     const payload: Partial<Category> = { name, icon, color, order: category?.order ?? 0 };
@@ -60,18 +60,18 @@ function CategoryModalForm({
   return (
     <DialogContent className="sm:max-w-[520px] p-8 gap-6">
       <DialogHeader>
-        <DialogTitle>{category ? '编辑分类' : '新建分类'}</DialogTitle>
+        <DialogTitle>{category ? 'Edit category' : 'New category'}</DialogTitle>
       </DialogHeader>
 
       <div className="space-y-5 py-1">
         <div className="grid grid-cols-[88px_1fr] items-center gap-x-4">
-          <Label htmlFor="name" className="text-muted-foreground font-normal">名称</Label>
+          <Label htmlFor="name" className="text-muted-foreground font-normal">Name</Label>
           <div className="space-y-1">
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="输入分类名称"
+              placeholder="Enter category name"
               aria-invalid={!!errors.name}
             />
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
@@ -79,7 +79,7 @@ function CategoryModalForm({
         </div>
 
         <div className="grid grid-cols-[88px_1fr] items-center gap-x-4">
-          <Label className="text-muted-foreground font-normal">图标</Label>
+          <Label className="text-muted-foreground font-normal">Icon</Label>
           <IconColorPicker
             icon={icon}
             color={color}
@@ -92,8 +92,8 @@ function CategoryModalForm({
       </div>
 
       <DialogFooter className="pt-2">
-        <Button variant="outline" onClick={onClose} disabled={saving}>取消</Button>
-        <Button onClick={handleSubmit} disabled={saving}>{saving ? '保存中…' : '保存'}</Button>
+        <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={handleSubmit} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
       </DialogFooter>
     </DialogContent>
   );

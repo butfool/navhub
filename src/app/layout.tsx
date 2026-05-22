@@ -4,6 +4,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "NavHub",
   description: "A lightweight self-hosted navigation dashboard for organizing web services.",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 const themeScript = `

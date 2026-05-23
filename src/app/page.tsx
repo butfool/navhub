@@ -18,6 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CategorySection } from './components/nav/CategorySection';
+import { Button } from './components/ui/button';
 import { ServiceModal } from './components/dialogs/ServiceModal';
 import { CategoryModal } from './components/dialogs/CategoryModal';
 import { useNavData } from './hooks/use-nav-data';
@@ -183,10 +184,10 @@ export default function HomePage() {
           </DndContext>
         )}
         <div className="add-category-bar edit-only">
-          <button className="btn btn-secondary" onClick={() => setModal({ type: 'newCategory' })} tabIndex={editMode ? 0 : -1} aria-hidden={!editMode}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" x2="12" y1="11" y2="17"/><line x1="9" x2="15" y1="14" y2="14"/></svg>
+          <Button variant="secondary" className="w-full justify-center" onClick={() => setModal({ type: 'newCategory' })} tabIndex={editMode ? 0 : -1} aria-hidden={!editMode}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" x2="12" y1="11" y2="17"/><line x1="9" x2="15" y1="14" y2="14"/></svg>
             New category
-          </button>
+          </Button>
         </div>
       </main>
 

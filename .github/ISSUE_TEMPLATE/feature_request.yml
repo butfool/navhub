@@ -1,0 +1,42 @@
+name: Feature Request
+description: Suggest a new feature or improvement for NavHub
+title: "[Feature] "
+labels: ["enhancement"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Description
+        A clear and concise description of the feature you'd like to see.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem Solved"
+      description: "What problem does this solve?"
+      placeholder: "I want to be able to ..."
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: "Proposed Solution"
+      description: "How should it work?"
+      placeholder: "A clear description of what you want to happen"
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives Considered"
+      description: "Any alternative solutions you've considered?"
+      placeholder: "I considered ..."
+
+  - type: checkboxes
+    id: checkbox
+    attributes:
+      label: "Checkboxes"
+      options:
+        - label: "I have searched existing issues to ensure this hasn't been requested"
+          required: true
+        - label: "This is a new feature and not a duplicate"
+          required: true

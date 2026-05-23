@@ -4,60 +4,61 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NavHub is a Next.js 16.2.6 (App Router) navigation dashboard that organizes web services by category. It uses Prisma with SQLite (better-sqlite3 adapter) for data persistence. Deployed via Docker with GitHub Actions CI/CD to GHCR.
+NavHub is a Go + React/Vite navigation dashboard that organizes web services by category. The Go backend serves both the JSON API and the embedded React SPA from a single binary. Uses SQLite for data persistence. Deployed via Docker with GitHub Actions CI/CD to GHCR.
 
 ## Commands
 
 ```bash
-# Development
-npm run dev          # Start dev server on port 57529
-npm run build        # Production build (standalone output)
-npm run lint          # ESLint check
+# Frontend (web/)
+cd web && npm run dev          # Start Vite dev server
+cd web && npm run build        # Production build
 
-# Prisma
-npx prisma generate   # Regenerate Prisma client from schema
-npx prisma migrate dev # Run migrations
+# Backend (Go)
+go build -o navhub ./cmd/server # Build binary
+go test ./...                   # Run tests
+go vet ./...                    # Lint
+
+# Docker
+docker build -t navhub .
+docker compose up -d
 ```
 
 ## Architecture
 
-### Data Flow
-- `src/lib/prisma.ts` - Singleton Prisma client, reads DB path from DATABASE_URL env (default: `file:./dev.db`)
-- `src/generated/prisma/` - Auto-generated Prisma client (do not edit manually, regenerate with `prisma generate`)
-- `src/app/api/services/route.ts` - REST API for Service CRUD (GET, POST, PUT, DELETE)
-- `src/app/api/categories/route.ts` - REST API for Category CRUD, includes nested services
+### Backend (Go)
+- `cmd/server/main.go` - HTTP server with embedded static assets
+- `internal/` - Store, handlers, models (not used yet, may be removed)
+- `migrations/` - SQL migrations for SQLite schema
 
-### Database Schema (Prisma)
-- Model `Category`: id, name (unique), icon, color, order, services[]
-- Model `Service`: id, name, categoryId (FK → Category, onDelete: Cascade), url, description, icon, color, order
-- Deleting a category cascades and removes all its services
+### Frontend (web/)
+- `web/src/App.tsx` - Main React app
+- `web/src/hooks/use-theme.ts` - Theme state and system preference listening
+- `web/src/hooks/use-nav-data.ts` - Category/service CRUD, reordering, and loading
+- `web/src/lib/api-client.ts` - Browser-side fetch wrapper for categories and services APIs
+- `web/src/types.ts` - Shared TypeScript types for Category and Service
+- `web/src/components/nav/CategorySection.tsx` - Dashboard category with services
+- `web/src/components/dialogs/` - ServiceModal, CategoryModal, IconColorPicker
+- `web/src/components/ui/` - shadcn/ui-style primitives (button, dialog, input, etc.)
+- `web/src/lib/icons/` - Icon system (lucide + simple-icons)
+- `web/src/lib/color.ts` - Color helpers (hexToRgba, rgbaToHex, etc.)
+- `web/src/globals.css` - Global CSS with theme variables
 
-### Key Files
-- `src/app/page.tsx` - Dashboard page composition, delegates to hooks and components
-- `src/app/hooks/use-theme.ts` - Theme state and system preference listening
-- `src/app/hooks/use-nav-data.ts` - Category/service CRUD, reordering, and loading
-- `src/app/lib/api-client.ts` - Browser-side fetch wrapper for categories and services APIs
-- `src/app/types.ts` - Shared TypeScript types for Category and Service
-- `src/app/components/nav/` - Dashboard-specific UI components (CategorySection)
-- `src/app/components/dialogs/` - ServiceModal, CategoryModal, IconColorPicker
-- `src/app/components/ui/` - shadcn/ui-style primitives (button, dialog, input, etc.)
-- `src/app/api/categories/route.ts` - REST API for Category CRUD, includes nested services
-- `src/app/api/services/route.ts` - REST API for Service CRUD
-- `src/app/api/utils.ts` - Input validation helpers and Prisma error mapping
-- `src/app/globals.css` - Global CSS with Tailwind v4 and CSS variables for theming
-- `src/lib/utils.ts` - `cn()` utility for Tailwind class merging
-- `src/lib/color.ts` - Color helpers (hexToRgba, rgbaToHex, rgbaToForeground, rgbaToGradient)
-- `src/lib/icons/` - Icon system supporting two packs via key prefix: `lucide:name` (stroke icons), `simple:slug` (brand icons), or bare name (defaults to lucide)
-- `prisma/schema.prisma` - Database schema, output set to `src/generated/prisma`
+### API Routes (Go)
+- `GET /api/categories` - List all categories with nested services
+- `POST /api/categories` - Create category
+- `PUT /api/categories?id=...` - Update category (supports partial updates, reorder)
+- `DELETE /api/categories?id=...` - Delete category (cascades to services)
+- `GET /api/services` - List all services with their category
+- `POST /api/services` - Create service
+- `PUT /api/services?id=...` - Update service (supports partial updates)
+- `DELETE /api/services?id=...` - Delete service
+
+### Database Schema (SQLite)
+- Table `Category`: id, name (unique), icon, color, "order", createdAt, updatedAt
+- Table `Service`: id, name, categoryId (FK → Category, ON DELETE CASCADE), url, description, icon, color, "order", createdAt, updatedAt
 
 ### Path Alias
-`@/*` maps to `./src/*` (configured in tsconfig.json)
-
-### Styling
-- Tailwind CSS v4 is used with CSS-first configuration (via `@theme` in globals.css)
-- Theme variables (`--bg-primary`, `--accent-violet`, etc.) are defined in `:root` and `[data-theme="light"]`
-- Custom CSS classes are defined directly in globals.css (not in tailwind.config)
-- shadcn/ui-style components in `src/app/components/ui/` (button, dialog, input, label, popover, scroll-area, textarea)
+`@/*` maps to `./web/src/*` (configured in web/tsconfig.json)
 
 ## Deployment
 
@@ -67,7 +68,6 @@ Pushing to `master` triggers GitHub Actions to build and push a Docker image to 
 ```bash
 mkdir -p ~/navhub && cd ~/navhub
 # Place docker-compose.yml from the repo
-echo "PORT=57529" > .env
 docker compose up -d
 
 # Update
@@ -78,18 +78,16 @@ The SQLite database is persisted at `./data/db.sqlite` via Docker volume.
 
 ## Important Notes
 
-**Next.js version**: This uses Next.js 16.2.6 with breaking changes from earlier versions. APIs, conventions, and file structure may differ from training data. Consult `node_modules/next/dist/docs/` for current documentation.
-
 **No tests currently exist** in this codebase.
 
-**CI**: PRs and pushes to `master` run lint and build via `.github/workflows/ci.yml`. The Docker workflow builds and pushes to GHCR on push to `master`.
+**CI**: `.github/workflows/ci.yml` runs Go vet, Go build, frontend lint, and frontend build.
 
-**Database**: Uses SQLite. Path configured via `DATABASE_URL` env var (format: `file:./dev.db`). Docker default: `file:./data/db.sqlite`.
+**Database**: Uses SQLite via `modernc.org/sqlite` (pure Go, no CGO). Path configured via `DATABASE_URL` env var (default: `file:/app/data/db.sqlite`).
 
-**Standalone output**: `next.config.ts` has `output: 'standalone'` for Docker deployment. The Dockerfile uses a multi-stage build; the runner stage only includes the standalone output + runtime deps.
+**Docker image**: Multi-stage build produces a ~15MB distroless/static image containing only the Go binary. No Node.js, no Next.js runtime.
 
-**Animation**: Uses `motion` (v12, formerly framer-motion) for card, modal, and layout animations. CSS variables define motion tokens (`--ease-spring-soft`, `--dur-base`, etc.) used in `globals.css`.
+**Animation**: Uses `motion` (v12) for card, modal, and layout animations. CSS variables define motion tokens.
 
-**Theme system**: Theme is applied via a synchronous inline `<script>` in layout.tsx `<head>` to prevent FART (flash of incorrect theme). The `useTheme` hook in page.tsx handles runtime theme changes and system preference listening.
+**Theme system**: Theme is applied via a synchronous inline `<script>` in `web/index.html` to prevent flash of incorrect theme. The `useTheme` hook handles runtime theme changes and system preference listening.
 
-**Category-Service relation**: Service references Category via `categoryId` foreign key. The categories API includes nested services in responses, so the frontend fetches categories once and gets all data. Category renames no longer need cascade updates.
+**Dev mode**: Run `go run ./cmd/server` for the backend on port 3000, and `cd web && npm run dev` for the frontend with Vite proxying `/api` requests to the Go backend.

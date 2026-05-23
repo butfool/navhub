@@ -1,61 +1,34 @@
 # syntax=docker/dockerfile:1
 
-# Stage 1: Base
-FROM node:22-alpine AS base
-RUN apk add --no-cache libc6-compat
+# Stage 1: Frontend build
+FROM node:22-alpine AS frontend
 WORKDIR /app
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build
 
-# Stage 2: Install dependencies (build tools needed for better-sqlite3 compilation)
-FROM base AS deps
-RUN apk add --no-cache python3 make g++
-COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci
-
-# Stage 3: Build
-FROM deps AS builder
+# Stage 2: Go build
+FROM golang:1.24-alpine AS backend
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
+# Copy frontend dist
+COPY --from=frontend /app/dist ./web/dist
+# Build with CGO_ENABLED=0 for pure static binary
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o navhub ./cmd/server
 
-# env("DATABASE_URL") requires the var to exist; dummy value for prisma generate
-ENV DATABASE_URL=file:./dev.db
-RUN npx prisma generate
-RUN --mount=type=cache,target=/app/.next/cache npm run build
+# Stage 3: Runner
+FROM gcr.io/distroless/static:nonroot
+COPY --from=backend /app/navhub /navhub
+# Copy migrations
+COPY --from=backend /app/migrations ./migrations
 
-# Strip devDependencies, keeping compiled native modules and prisma CLI
-RUN npm prune --omit=dev \
-  && rm -rf node_modules/@next/swc-linux-x64-gnu \
-  && rm -rf node_modules/typescript
-
-# Stage 4: Production runner
-FROM base AS runner
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-ENV DATABASE_URL="file:./data/db.sqlite"
-
-# Standalone output (traced node_modules + server.js)
-COPY --from=builder /app/.next/standalone ./
-# Full production node_modules (prisma CLI, effect, compiled better-sqlite3, etc.)
-COPY --from=builder /app/node_modules ./node_modules
-# Static assets
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-# Prisma runtime for migrate deploy
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./
-# Generated Prisma client at the location Prisma CLI expects
-COPY --from=builder /app/src/generated/prisma ./node_modules/.prisma/client
-
-# Startup
-COPY <<'EOF' /app/start.sh
-#!/bin/sh
-set -e
-npx prisma migrate deploy
-exec node server.js
-EOF
-RUN chmod +x /app/start.sh
-
-USER node
+USER nonroot
 EXPOSE 3000
-CMD ["/app/start.sh"]
+ENV PORT=3000
+ENV DATABASE_URL=file:/app/data/db.sqlite
+WORKDIR /app
+VOLUME ["/app/data"]
+ENTRYPOINT ["/navhub"]

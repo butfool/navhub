@@ -12,24 +12,41 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # --- Go checks ---
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Download Go dependencies
+        run: go mod download
+
+      - name: Run Go vet
+        run: go vet ./...
+
+      # --- Frontend checks ---
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          working-directory: web
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: npm ci
+        working-directory: web
 
-      - name: Generate Prisma client
-        run: npx prisma generate
-        env:
-          DATABASE_URL: file:./dev.db
-
-      - name: Run lint
+      - name: Run frontend lint
         run: npm run lint
+        working-directory: web
 
-      - name: Build
+      - name: Build frontend
         run: npm run build
-        env:
-          DATABASE_URL: file:./dev.db
+        working-directory: web
+
+      # --- Build Go binary ---
+      - name: Build Go binary
+        run: |
+          mkdir -p web/dist
+          CGO_ENABLED=0 go build -ldflags="-s -w" -o navhub ./cmd/server

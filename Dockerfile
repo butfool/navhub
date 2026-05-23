@@ -16,6 +16,8 @@ FROM deps AS builder
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# env("DATABASE_URL") requires the var to exist; dummy value for prisma generate
+ENV DATABASE_URL=file:./dev.db
 RUN npx prisma generate
 RUN --mount=type=cache,target=/app/.next/cache npm run build
 

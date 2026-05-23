@@ -22,7 +22,9 @@ RUN npx prisma generate
 RUN --mount=type=cache,target=/app/.next/cache npm run build
 
 # Strip devDependencies, keeping compiled native modules and prisma CLI
-RUN npm prune --omit=dev
+RUN npm prune --omit=dev \
+  && rm -rf node_modules/@next/swc-linux-x64-gnu \
+  && rm -rf node_modules/typescript
 
 # Stage 4: Production runner
 FROM base AS runner

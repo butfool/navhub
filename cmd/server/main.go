@@ -6,6 +6,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -19,6 +20,8 @@ import (
 
 //go:embed web/dist
 var staticFS embed.FS
+
+var subFS, _ = fs.Sub(staticFS, "web/dist")
 
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
@@ -720,7 +723,7 @@ func main() {
 
 		// Static assets
 		if strings.HasPrefix(r.URL.Path, "/assets/") {
-			http.StripPrefix("/assets/", http.FileServer(http.FS(staticFS))).ServeHTTP(w, r)
+			http.StripPrefix("/assets/", http.FileServer(http.FS(subFS))).ServeHTTP(w, r)
 			return
 		}
 

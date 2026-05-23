@@ -9,9 +9,7 @@ RUN npm ci
 FROM deps AS builder
 WORKDIR /app
 COPY . .
-RUN npx prisma generate && \
-    ln -sfn /app/src/generated/prisma /app/node_modules/.prisma && \
-    ln -sfn /app/src/generated/prisma /app/node_modules/.prisma/client
+RUN npx prisma generate
 RUN npm run build
 
 # Stage 3: Production runner
@@ -29,8 +27,8 @@ COPY --from=builder /app/public ./public
 # Copy Prisma files for runtime migrations
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-# Copy Prisma generated client (symlinked from custom output location)
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Copy Prisma generated client from custom output location
+COPY --from=builder /app/src/generated/prisma ./node_modules/.prisma/client
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3

@@ -25,7 +25,9 @@ export function createService(service: ServiceInput) {
 }
 
 export function updateService(service: ServiceInput) {
-  return request<Service>('/api/services', {
+  const id = service.id;
+  if (!id) throw new Error('id is required');
+  return request<Service>(`/api/services?id=${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(service),
@@ -49,7 +51,9 @@ export function createCategory(category: CategoryInput) {
 }
 
 export function updateCategory(category: CategoryInput) {
-  return request<Category>('/api/categories', {
+  const id = category.id;
+  if (!id) throw new Error('id is required');
+  return request<Category>(`/api/categories?id=${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(category),

@@ -14,7 +14,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-# Copy frontend dist
+# Copy frontend dist to cmd/server/web/dist (go:embed in cmd/server/main.go embeds this path)
 COPY --from=frontend /app/dist ./cmd/server/web/dist
 # Build with CGO_ENABLED=0 for pure static binary
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o navhub ./cmd/server

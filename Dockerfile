@@ -19,17 +19,29 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Copy package files for production install (devDependencies excluded)
+COPY --from=builder /app/package.json /app/package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts
+
 # Copy standalone build output
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Copy Prisma files for runtime migrations
+# Copy Prisma schema and config
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-# Copy full node_modules from builder (includes prisma CLI, better-sqlite3, etc.)
-# Next.js standalone output only includes production deps, but prisma CLI is in devDependencies
-COPY --from=builder /app/node_modules ./node_modules
+
+# Copy prisma CLI binary (devDependency, not included in --omit=dev)
+COPY --from=builder /app/node_modules/.bin/prisma /usr/local/bin/prisma
+
+# Copy Prisma generated client from custom output location
+COPY --from=builder /app/src/generated/prisma ./node_modules/.prisma/client
+
+# Copy required native modules
+COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
+COPY --from=builder /app/node_modules/@prisma/adapter-better-sqlite3 ./node_modules/@prisma/adapter-better-sqlite3
+COPY --from=builder /app/node_modules/dotenv ./node_modules/dotenv
 
 # Startup script: run migrations then start server
 COPY <<'EOF' /app/start.sh

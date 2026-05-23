@@ -27,15 +27,9 @@ COPY --from=builder /app/public ./public
 # Copy Prisma files for runtime migrations
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-# Copy Prisma generated client from custom output location
-COPY --from=builder /app/src/generated/prisma ./node_modules/.prisma/client
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
-COPY --from=builder /app/node_modules/@prisma/adapter-better-sqlite3 ./node_modules/@prisma/adapter-better-sqlite3
-
-# Copy dotenv for prisma config
-COPY --from=builder /app/node_modules/dotenv ./node_modules/dotenv
+# Copy full node_modules from builder (includes prisma CLI, better-sqlite3, etc.)
+# Next.js standalone output only includes production deps, but prisma CLI is in devDependencies
+COPY --from=builder /app/node_modules ./node_modules
 
 # Startup script: run migrations then start server
 COPY <<'EOF' /app/start.sh

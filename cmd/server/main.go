@@ -60,9 +60,9 @@ type Store struct {
 }
 
 func NewStore(dbPath string) (*Store, error) {
-	dir := strings.TrimSuffix(dbPath, "/db.sqlite")
+	dir := strings.TrimPrefix(dbPath, "file:")
+	dir = strings.TrimSuffix(dir, "/db.sqlite")
 	dir = strings.TrimSuffix(dir, ".sqlite")
-	dir = strings.TrimPrefix(dir, "file:")
 	os.MkdirAll(dir, 0755)
 
 	dbPath = strings.TrimPrefix(dbPath, "file:")

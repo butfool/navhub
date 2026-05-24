@@ -41,6 +41,9 @@ jobs:
       - name: Run Go vet
         run: go vet ./...
 
+      - name: Run Go tests
+        run: go test ./...
+
       # --- Build Go binary ---
       - name: Build Go binary
         run: |

@@ -6,6 +6,4 @@ services:
       - "${PORT:-57529}:3000"
     volumes:
       - ./data:/app/data
-    environment:
-      - DATABASE_URL=file:./data/db.sqlite
     restart: unless-stopped

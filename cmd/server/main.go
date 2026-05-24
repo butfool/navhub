@@ -684,12 +684,7 @@ func runMigrations(db *sql.DB) error {
 // --- Main ---
 
 func main() {
-	dbPath := os.Getenv("DATABASE_URL")
-	if dbPath == "" {
-		dbPath = "file:/app/data/db.sqlite"
-	}
-
-	store, err := NewStore(dbPath)
+	store, err := NewStore(os.Getenv("DATABASE_URL"))
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}

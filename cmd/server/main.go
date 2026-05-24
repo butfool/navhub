@@ -723,7 +723,7 @@ func main() {
 
 		// Static assets
 		if strings.HasPrefix(r.URL.Path, "/assets/") {
-			http.StripPrefix("/assets/", http.FileServer(http.FS(subFS))).ServeHTTP(w, r)
+			http.FileServer(http.FS(subFS)).ServeHTTP(w, r)
 			return
 		}
 

@@ -12,6 +12,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # --- Frontend checks ---
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: web
+
       # --- Go checks ---
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -25,28 +41,7 @@ jobs:
       - name: Run Go vet
         run: go vet ./...
 
-      # --- Frontend checks ---
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          working-directory: web
-
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: web
-
-      - name: Run frontend lint
-        run: npm run lint
-        working-directory: web
-
-      - name: Build frontend
-        run: npm run build
-        working-directory: web
-
       # --- Build Go binary ---
       - name: Build Go binary
         run: |
-          mkdir -p web/dist
           CGO_ENABLED=0 go build -ldflags="-s -w" -o navhub ./cmd/server

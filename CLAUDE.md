@@ -9,13 +9,13 @@ NavHub is a Go + React/Vite navigation dashboard that organizes web services by 
 ## Commands
 
 ```bash
-# Frontend (web/)
-cd web && npm run dev          # Start Vite dev server
-cd web && npm run build        # Production build
+# Frontend (run from web/ directory)
+npm run dev          # Start Vite dev server
+npm run build        # Production build into ../cmd/server/web/dist
 
-# Backend (Go)
+# Backend (run from project root)
 go build -o navhub ./cmd/server # Build binary
-go test ./...                   # Run tests
+go test ./...                   # Run tests (no test files currently exist)
 go vet ./...                    # Lint
 
 # Docker
@@ -27,7 +27,8 @@ docker compose up -d
 
 ### Backend (Go)
 - `cmd/server/main.go` - HTTP server with embedded static assets
-- `internal/` - Store, handlers, models (not used yet, may be removed)
+- `cmd/server/web/dist/` - Embedded Vite production output served by the Go binary
+- `internal/handler/`, `internal/model/`, `internal/store/`, `internal/validate/` - HTTP handlers, data models, database store, validation logic
 - `migrations/` - SQL migrations for SQLite schema
 
 ### Frontend (web/)
@@ -67,7 +68,7 @@ Pushing to `master` triggers GitHub Actions to build and push a Docker image to 
 ### Server setup
 ```bash
 mkdir -p ~/navhub && cd ~/navhub
-# Place docker-compose.yml from the repo
+cp /path/to/navhub/docker-compose.yml ./
 docker compose up -d
 
 # Update

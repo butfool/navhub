@@ -207,16 +207,22 @@ function SortableServiceCard({ service, editMode, index, onEdit, onDelete }: Sor
   const stroke = rgbaToForeground(service.color);
   const isBrand = service.icon.startsWith('simple:');
 
+  const showCopied = useCallback(() => {
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    setCopied(true);
+    copiedTimer.current = setTimeout(() => setCopied(false), 1500);
+  }, []);
+
   const handleCopy = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!navigator.clipboard) return;
-    navigator.clipboard.writeText(service.url).then(() => {
+    showCopied();
+    navigator.clipboard.writeText(service.url).catch(() => {
       if (copiedTimer.current) clearTimeout(copiedTimer.current);
-      setCopied(true);
-      copiedTimer.current = setTimeout(() => setCopied(false), 1500);
-    }).catch(() => {});
-  }, [service.url]);
+      setCopied(false);
+    });
+  }, [service.url, showCopied]);
 
   useEffect(() => {
     return () => { if (copiedTimer.current) clearTimeout(copiedTimer.current); };

@@ -74,6 +74,15 @@ func NewStore(dbPath string) (*Store, error) {
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		return nil, err
 	}
+	if _, err := db.Exec("PRAGMA journal_mode = WAL"); err != nil {
+		return nil, err
+	}
+	if _, err := db.Exec("PRAGMA busy_timeout = 5000"); err != nil {
+		return nil, err
+	}
+	if _, err := db.Exec("PRAGMA locking_mode = NORMAL"); err != nil {
+		return nil, err
+	}
 
 	return &Store{db: db}, nil
 }
@@ -84,28 +93,76 @@ func (s *Store) Close() error { return s.db.Close() }
 
 func (s *Store) GetCategories() ([]Category, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, icon, color, "order", createdAt, updatedAt
-		FROM Category ORDER BY "order" ASC, name ASC
+		SELECT c.id, c.name, c.icon, c.color, c."order", c.createdAt, c.updatedAt,
+			   s.id, s.name, s.categoryId, s.url, s.description, s.icon, s.color, s."order", s.createdAt, s.updatedAt
+		FROM Category c
+		LEFT JOIN Service s ON s.categoryId = c.id
+		ORDER BY c."order" ASC, c.name ASC, s."order" ASC, s.name ASC
 	`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var categories []Category
+	categoryMap := make(map[string]*Category)
 	for rows.Next() {
 		var c Category
-		if err := rows.Scan(&c.ID, &c.Name, &c.Icon, &c.Color, &c.Order, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		var svc Service
+		var svcID, svcName, svcCatID, svcURL, svcDesc, svcIcon, svcColor sql.NullString
+		var svcOrder sql.NullInt64
+		var svcCreatedAt, svcUpdatedAt sql.NullTime
+
+		if err := rows.Scan(
+			&c.ID, &c.Name, &c.Icon, &c.Color, &c.Order, &c.CreatedAt, &c.UpdatedAt,
+			&svcID, &svcName, &svcCatID, &svcURL, &svcDesc, &svcIcon, &svcColor, &svcOrder, &svcCreatedAt, &svcUpdatedAt,
+		); err != nil {
 			return nil, err
 		}
-		services, err := s.GetServicesByCategory(c.ID)
-		if err != nil {
-			return nil, err
+
+		if _, ok := categoryMap[c.ID]; !ok {
+			cp := c // copy to avoid loop variable pointer aliasing
+			cp.Services = []Service{}
+			categoryMap[c.ID] = &cp
 		}
-		c.Services = services
-		categories = append(categories, c)
+
+		if svcID.Valid {
+			svc.ID = svcID.String
+			svc.Name = svcName.String
+			svc.CategoryID = svcCatID.String
+			svc.URL = svcURL.String
+			svc.Description = svcDesc.String
+			svc.Icon = svcIcon.String
+			svc.Color = svcColor.String
+			if svcOrder.Valid {
+				svc.Order = int(svcOrder.Int64)
+			}
+			svc.CreatedAt = svcCreatedAt.Time
+			svc.UpdatedAt = svcUpdatedAt.Time
+			categoryMap[c.ID].Services = append(categoryMap[c.ID].Services, svc)
+		}
 	}
-	return categories, nil
+
+	result := make([]Category, 0, len(categoryMap))
+	// Map iteration order is random, so we need to sort
+	type catOrder struct {
+		id    string
+		order int
+		name  string
+	}
+	orders := make([]catOrder, 0, len(categoryMap))
+	for id, c := range categoryMap {
+		orders = append(orders, catOrder{id, c.Order, c.Name})
+	}
+	sort.Slice(orders, func(i, j int) bool {
+		if orders[i].order != orders[j].order {
+			return orders[i].order < orders[j].order
+		}
+		return orders[i].name < orders[j].name
+	})
+	for _, co := range orders {
+		result = append(result, *categoryMap[co.id])
+	}
+	return result, nil
 }
 
 func (s *Store) GetCategoryByID(id string) (*Category, error) {
@@ -140,18 +197,29 @@ func (s *Store) CreateCategory(c *Category) error {
 }
 
 func (s *Store) UpdateCategory(c *Category) error {
-	res, err := s.db.Exec(`UPDATE Category SET name = ?, icon = ?, color = ?, "order" = ?, updatedAt = ? WHERE id = ?`,
-		c.Name, c.Icon, c.Color, c.Order, c.UpdatedAt, c.ID)
-	if err != nil && strings.Contains(err.Error(), "UNIQUE") {
-		return ErrAlreadyExists
-	}
-	if err != nil {
+	const maxRetries = 3
+	var lastErr error
+	for i := 0; i < maxRetries; i++ {
+		res, err := s.db.Exec(`UPDATE Category SET name = ?, icon = ?, color = ?, "order" = ?, updatedAt = ? WHERE id = ?`,
+			c.Name, c.Icon, c.Color, c.Order, c.UpdatedAt, c.ID)
+		if err == nil {
+			if n, _ := res.RowsAffected(); n == 0 {
+				return ErrNotFound
+			}
+			return nil
+		}
+		if strings.Contains(err.Error(), "UNIQUE") {
+			return ErrAlreadyExists
+		}
+		// Retry on SQLITE_BUSY
+		if strings.Contains(err.Error(), "SQLITE_BUSY") || strings.Contains(err.Error(), "database is locked") {
+			lastErr = err
+			time.Sleep(time.Duration(50*(i+1)) * time.Millisecond)
+			continue
+		}
 		return err
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return ErrNotFound
-	}
-	return nil
+	return fmt.Errorf("update failed after %d retries: %w", maxRetries, lastErr)
 }
 
 func (s *Store) DeleteCategory(id string) error {
@@ -249,15 +317,28 @@ func (s *Store) CreateService(svc *Service) error {
 }
 
 func (s *Store) UpdateService(svc *Service) error {
-	res, err := s.db.Exec(`UPDATE Service SET name = ?, categoryId = ?, url = ?, description = ?, icon = ?, color = ?, "order" = ?, updatedAt = ? WHERE id = ?`,
-		svc.Name, svc.CategoryID, svc.URL, svc.Description, svc.Icon, svc.Color, svc.Order, svc.UpdatedAt, svc.ID)
-	if err != nil {
+	const maxRetries = 3
+	var lastErr error
+	for i := 0; i < maxRetries; i++ {
+		res, err := s.db.Exec(`UPDATE Service SET name = ?, categoryId = ?, url = ?, description = ?, icon = ?, color = ?, "order" = ?, updatedAt = ? WHERE id = ?`,
+			svc.Name, svc.CategoryID, svc.URL, svc.Description, svc.Icon, svc.Color, svc.Order, svc.UpdatedAt, svc.ID)
+		if err == nil {
+			if n, _ := res.RowsAffected(); n == 0 {
+				return ErrNotFound
+			}
+			return nil
+		}
+		if strings.Contains(err.Error(), "UNIQUE") {
+			return ErrAlreadyExists
+		}
+		if strings.Contains(err.Error(), "SQLITE_BUSY") || strings.Contains(err.Error(), "database is locked") {
+			lastErr = err
+			time.Sleep(time.Duration(50*(i+1)) * time.Millisecond)
+			continue
+		}
 		return err
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return ErrNotFound
-	}
-	return nil
+	return fmt.Errorf("update failed after %d retries: %w", maxRetries, lastErr)
 }
 
 func (s *Store) DeleteService(id string) error {
@@ -394,6 +475,8 @@ func (h *Handler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 	}
 	cat.UpdatedAt = time.Now()
 	if err := h.store.UpdateCategory(cat); err != nil {
+		log.Printf("UpdateCategory error: id=%s, err=%v (type=%T)", id, err, err)
+		errMsg := fmt.Sprintf("UpdateCategory failed: %v", err)
 		if err == ErrAlreadyExists {
 			h.error(w, 409, "Record already exists")
 			return
@@ -402,7 +485,7 @@ func (h *Handler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 			h.error(w, 404, "Related record not found")
 			return
 		}
-		h.error(w, 500, "Failed to update category")
+		h.error(w, 500, errMsg)
 		return
 	}
 	h.json(w, 200, cat)
@@ -684,7 +767,11 @@ func runMigrations(db *sql.DB) error {
 // --- Main ---
 
 func main() {
-	store, err := NewStore(os.Getenv("DATABASE_URL"))
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = "file:./dev.db"
+	}
+	store, err := NewStore(dbURL)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
@@ -692,6 +779,13 @@ func main() {
 
 	if err := runMigrations(store.db); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	// Warn if no categories exist (fresh database with no seed data)
+	var count int
+	store.db.QueryRow("SELECT COUNT(*) FROM Category").Scan(&count)
+	if count == 0 {
+		log.Printf("Warning: No categories found. Database may be empty. Run 'go run scripts/seed.go' to populate sample data.")
 	}
 
 	h := NewHandler(store)

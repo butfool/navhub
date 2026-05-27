@@ -1,19 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { AnimatePresence } from 'motion/react';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
 import { CategorySection } from './components/nav/CategorySection';
 import { Button } from './components/ui/button';
 import { ServiceModal } from './components/dialogs/ServiceModal';
@@ -36,20 +21,13 @@ export default function App() {
     removeService,
     removeCategory,
     saveCategory,
-    reorderCategories,
+    moveCategory,
     reorderServices,
   } = useNavData();
   const { theme, changeTheme } = useTheme();
   const [editMode, setEditMode] = useState(false);
   const [modal, setModal] = useState<ModalState>({ type: 'closed' });
   const [saving, setSaving] = useState(false);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
 
   useEffect(() => {
     document.body.dataset.editMode = editMode ? 'true' : 'false';
@@ -95,10 +73,8 @@ export default function App() {
     }
   };
 
-  const handleCategoryDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    await reorderCategories(active.id as string, over.id as string);
+  const handleMoveCategory = (id: string, dir: 'up' | 'down') => {
+    moveCategory(id, dir);
   };
 
   const categoryData = useMemo(() =>
@@ -157,37 +133,29 @@ export default function App() {
             </button>
           </div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleCategoryDragEnd}
-          >
-            <SortableContext
-              items={categoryData.map(category => category.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <AnimatePresence mode="popLayout" initial={false}>
-                {categoryData.map((category, index) => (
-                  <CategorySection
-                    key={category.id}
-                    id={category.id}
-                    name={category.name}
-                    icon={category.icon}
-                    color={category.color}
-                    services={category.services ?? []}
-                    editMode={editMode}
-                    index={index}
-                    onEdit={(service) => setModal({ type: 'editService', service })}
-                    onDelete={handleDeleteService}
-                    onDeleteCategory={handleDeleteCategory}
-                    onEditCategory={() => setModal({ type: 'editCategory', category })}
-                    onAddService={() => setModal({ type: 'editService', categoryId: category.id })}
-                    onServiceDragEnd={reorderServices}
-                  />
-                ))}
-              </AnimatePresence>
-            </SortableContext>
-          </DndContext>
+          <>
+            {categoryData.map((category, index) => (
+              <CategorySection
+                key={category.id}
+                id={category.id}
+                name={category.name}
+                icon={category.icon}
+                color={category.color}
+                services={category.services ?? []}
+                editMode={editMode}
+                index={index}
+                total={categoryData.length}
+                onEdit={(service) => setModal({ type: 'editService', service })}
+                onDelete={handleDeleteService}
+                onDeleteCategory={handleDeleteCategory}
+                onEditCategory={() => setModal({ type: 'editCategory', category })}
+                onAddService={() => setModal({ type: 'editService', categoryId: category.id })}
+                onServiceDragEnd={reorderServices}
+                onMoveUp={() => handleMoveCategory(category.id, 'up')}
+                onMoveDown={() => handleMoveCategory(category.id, 'down')}
+              />
+            ))}
+          </>
         )}
         <div className="add-category-bar edit-only">
           <Button variant="secondary" onClick={() => setModal({ type: 'newCategory' })} tabIndex={editMode ? 0 : -1} aria-hidden={!editMode}>

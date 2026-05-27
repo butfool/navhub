@@ -342,6 +342,36 @@ main {
   cursor: grabbing;
 }
 
+.section-header-order {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: 4px;
+}
+.order-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 18px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+.order-btn:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  color: var(--accent-violet);
+  border-color: var(--border-glow);
+}
+.order-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 /* Add-new placeholder card */
 .card.card-add {
   background: transparent;
@@ -644,6 +674,33 @@ main {
   border-color: var(--border-glow);
 }
 .card-drag-handle:active { cursor: grabbing; }
+
+/* Drag overlay styling for category ghost */
+.drag-overlay-category {
+  opacity: 0.92;
+  padding: 1.25rem;
+  background: var(--bg-elevated);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 28px 60px -16px rgba(139,92,246,0.55), 0 0 0 1px var(--accent-violet);
+  cursor: grabbing;
+  transform: rotate(1.5deg) scale(1.02);
+}
+
+.drag-overlay-service {
+  opacity: 0.92;
+  padding: 1.25rem;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-md);
+  box-shadow: 0 30px 60px -12px rgba(139,92,246,0.6), 0 0 0 1px var(--accent-violet);
+  cursor: grabbing;
+  transform: rotate(2deg) scale(1.05);
+}
 
 .card-link {
   text-decoration: none;

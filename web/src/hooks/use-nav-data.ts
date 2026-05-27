@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { Category, Service } from '../types';
 import {
@@ -14,6 +14,7 @@ import {
 export function useNavData() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const reorderRef = useRef(false);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -44,7 +45,7 @@ export function useNavData() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [fetchCategories]);
 
   const saveService = async (service: Partial<Service>) => {
     if (service.id) {
@@ -74,41 +75,47 @@ export function useNavData() {
     await fetchCategories();
   };
 
-  const reorderCategories = async (activeId: string, overId: string) => {
-    const oldIndex = categories.findIndex(category => category.id === activeId);
-    const newIndex = categories.findIndex(category => category.id === overId);
-    if (oldIndex === -1 || newIndex === -1) return;
+  const moveCategory = useCallback(async (id: string, direction: 'up' | 'down') => {
+    if (reorderRef.current) return;
+    reorderRef.current = true;
+    const sorted = [...categories].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex(c => c.id === id);
+    if (idx === -1) return;
+    if (direction === 'up' && idx === 0) return;
+    if (direction === 'down' && idx === sorted.length - 1) return;
 
-    const reordered = arrayMove(categories, oldIndex, newIndex);
-    setCategories(reordered);
-    try {
-      await Promise.all(reordered.map((category, index) => updateCategory({ id: category.id, order: index })));
-    } catch (err) {
-      console.error('Failed to reorder categories:', err);
-      fetchCategories();
-    }
-  };
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    const reordered = arrayMove(sorted, idx, targetIdx);
+    const withOrder = reordered.map((cat, i) => ({ ...cat, order: i }));
 
-  const reorderServices = async (categoryId: string, activeId: string, overId: string) => {
+    setCategories(withOrder);
+
+    Promise.all(withOrder.map((cat, i) => updateCategory({ id: cat.id, order: i }))).catch(err => {
+      console.error('Failed to move category:', err);
+    }).finally(() => { reorderRef.current = false; });
+  }, [categories]);
+
+  const reorderServices = useCallback(async (categoryId: string, activeId: string, overId: string) => {
+    if (reorderRef.current) return;
+    reorderRef.current = true;
+
     const category = categories.find(item => item.id === categoryId);
     if (!category?.services) return;
 
-    const oldIndex = category.services.findIndex(service => service.id === activeId);
-    const newIndex = category.services.findIndex(service => service.id === overId);
+    const oldIndex = category.services.findIndex(s => s.id === activeId);
+    const newIndex = category.services.findIndex(s => s.id === overId);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    const reordered = arrayMove(category.services, oldIndex, newIndex);
+    const reordered = arrayMove(category.services, oldIndex, newIndex).map((svc, i) => ({ ...svc, order: i }));
+
     setCategories(prev => prev.map(item =>
       item.id === categoryId ? { ...item, services: reordered } : item
     ));
 
-    try {
-      await Promise.all(reordered.map((service, index) => updateService({ id: service.id, order: index })));
-    } catch (err) {
+    Promise.all(reordered.map((svc, i) => updateService({ id: svc.id, order: i }))).catch(err => {
       console.error('Failed to reorder services:', err);
-      fetchCategories();
-    }
-  };
+    }).finally(() => { reorderRef.current = false; });
+  }, [categories]);
 
   return {
     categories,
@@ -117,7 +124,7 @@ export function useNavData() {
     removeService,
     removeCategory,
     saveCategory,
-    reorderCategories,
+    moveCategory,
     reorderServices,
   };
 }

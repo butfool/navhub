@@ -1,5 +1,4 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import {
   DndContext,
   closestCenter,
@@ -28,12 +27,15 @@ interface CategorySectionProps {
   services: Service[];
   editMode: boolean;
   index: number;
+  total: number;
   onEdit: (svc: Service) => void;
   onDelete: (id: string) => void;
   onDeleteCategory: (id: string) => void;
   onEditCategory: () => void;
   onAddService: () => void;
   onServiceDragEnd: (categoryId: string, activeId: string, overId: string) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }
 
 export function CategorySection({
@@ -44,35 +46,16 @@ export function CategorySection({
   services,
   editMode,
   index,
+  total,
   onEdit,
   onDelete,
   onDeleteCategory,
   onEditCategory,
   onAddService,
   onServiceDragEnd,
+  onMoveUp,
+  onMoveDown,
 }: CategorySectionProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id, disabled: !editMode });
-
-  const dragOffset = CSS.Transform.toString(transform);
-  const style = {
-    transform: isDragging && dragOffset
-      ? `${dragOffset} scale(1.03) rotate(1.5deg)`
-      : dragOffset,
-    transition,
-    zIndex: isDragging ? 50 : undefined,
-    boxShadow: isDragging
-      ? '0 28px 60px -16px rgba(139,92,246,0.55), 0 0 0 1px var(--accent-violet)'
-      : undefined,
-    '--enter-index': index,
-  } as React.CSSProperties;
-
   const iconSvg = getIconSvg(icon);
   const stroke = rgbaToForeground(color);
   const isBrand = icon.startsWith('simple:');
@@ -94,26 +77,33 @@ export function CategorySection({
 
   return (
     <section
-      ref={setNodeRef}
-      style={style}
       className="section-wrapper"
       data-edit-mode={editMode ? 'true' : 'false'}
-      data-dragging={isDragging ? 'true' : 'false'}
+      style={{ '--enter-index': index } as React.CSSProperties}
     >
       <div className="section-header">
-        <button
-          className="drag-handle edit-only"
-          {...attributes}
-          {...listeners}
-          title="Drag to reorder"
-          tabIndex={editMode ? 0 : -1}
-          aria-hidden={!editMode}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/>
-            <circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>
-          </svg>
-        </button>
+        <div className="section-header-order edit-only">
+          <button
+            className="order-btn"
+            onClick={onMoveUp}
+            disabled={index === 0}
+            title="Move up"
+            tabIndex={editMode ? 0 : -1}
+            aria-hidden={!editMode}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
+          <button
+            className="order-btn"
+            onClick={onMoveDown}
+            disabled={index === total - 1}
+            title="Move down"
+            tabIndex={editMode ? 0 : -1}
+            aria-hidden={!editMode}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
         <div className="section-icon" style={{ background: rgbaToGradient(color), color: stroke }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill={isBrand ? 'currentColor' : 'none'} stroke={isBrand ? 'none' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: iconSvg }} />
         </div>
@@ -134,8 +124,7 @@ export function CategorySection({
       >
         <SortableContext items={serviceIds} strategy={rectSortingStrategy}>
           <div className="service-grid">
-            <AnimatePresence mode="popLayout" initial={false}>
-              {services.map((svc, i) => (
+            {services.map((svc, i) => (
                 <SortableServiceCard
                   key={svc.id}
                   service={svc}
@@ -145,7 +134,6 @@ export function CategorySection({
                   onDelete={onDelete}
                 />
               ))}
-            </AnimatePresence>
             <button
               type="button"
               className="card card-add edit-only"
@@ -192,10 +180,9 @@ function SortableServiceCard({ service, editMode, index, onEdit, onDelete }: Sor
 
   const dragOffset = CSS.Transform.toString(transform);
   const style = {
-    transform: isDragging && dragOffset
-      ? `${dragOffset} scale(1.05) rotate(2deg)`
-      : dragOffset,
+    transform: dragOffset,
     transition,
+    opacity: isDragging ? 0.45 : 1,
     zIndex: isDragging ? 1000 : 'auto',
     boxShadow: isDragging
       ? '0 30px 60px -12px rgba(139,92,246,0.6), 0 0 0 1px var(--accent-violet)'
@@ -229,17 +216,12 @@ function SortableServiceCard({ service, editMode, index, onEdit, onDelete }: Sor
   }, []);
 
   return (
-    <motion.div
+    <div
       ref={setNodeRef}
       style={style}
       className="card"
       data-edit-mode={editMode ? 'true' : 'false'}
       data-dragging={isDragging ? 'true' : 'false'}
-      layout
-      initial={{ opacity: 0, scale: 0.94, y: 8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.92, filter: 'blur(4px)' }}
-      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="card-drag-handle edit-only" {...attributes} {...listeners} aria-hidden={!editMode}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -273,6 +255,6 @@ function SortableServiceCard({ service, editMode, index, onEdit, onDelete }: Sor
           {service.description && <span className="card-description">{service.description}</span>}
         </div>
       </a>
-    </motion.div>
+    </div>
   );
 }

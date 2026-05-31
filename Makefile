@@ -2,11 +2,11 @@
 
 .DEFAULT_GOAL := dev
 
-BINARY := navhub
+BINARY := bin/navhub
 CMD_DIR := ./cmd/server
 WEB_DIR := ./web
 DOCKER_IMAGE := navhub
-DATABASE_URL := file:./dev.db
+DATABASE_URL := file:./data/dev.db
 
 # Build both frontend and backend
 build: build-frontend build-backend
@@ -17,6 +17,7 @@ build-frontend:
 
 # Build Go binary
 build-backend:
+	@mkdir -p bin
 	CGO_ENABLED=0 go build -ldflags="-s -w" -o $(BINARY) $(CMD_DIR)
 
 # Start both dev servers
@@ -62,5 +63,5 @@ run: build-backend
 
 # Clean build artifacts
 clean:
-	rm -f $(BINARY)
+	rm -rf bin/
 	rm -rf $(CMD_DIR)/web/dist

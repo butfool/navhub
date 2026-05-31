@@ -22,8 +22,6 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o navhub ./cmd/server
 # Stage 3: Runner
 FROM gcr.io/distroless/static:nonroot
 COPY --from=backend /app/navhub /navhub
-# Copy migrations
-COPY --from=backend /app/migrations ./migrations
 
 USER nonroot
 EXPOSE 3000

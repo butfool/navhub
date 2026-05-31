@@ -810,8 +810,8 @@ func main() {
 			}
 		}
 
-		// Static assets
-		if strings.HasPrefix(r.URL.Path, "/assets/") {
+		// Static assets and favicon
+		if strings.HasPrefix(r.URL.Path, "/assets/") || r.URL.Path == "/favicon.svg" {
 			http.FileServer(http.FS(subFS)).ServeHTTP(w, r)
 			return
 		}

@@ -241,6 +241,7 @@ function SortableServiceCard({ service, editMode, index, onEdit, onDelete }: Sor
           <div className={`icon${isBrand ? ' icon-brand' : ''}`} style={{ background: service.color, color: stroke }}>
             <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: iconSvg }} />
           </div>
+          <span className="card-name">{service.name}</span>
           <div className="card-actions edit-only" aria-hidden={!editMode}>
             <button className="card-action" onClick={(e) => { e.preventDefault(); onEdit(service); }} title="Edit" tabIndex={editMode ? 0 : -1}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -250,10 +251,7 @@ function SortableServiceCard({ service, editMode, index, onEdit, onDelete }: Sor
             </button>
           </div>
         </div>
-        <div className="card-text">
-          <span className="card-name">{service.name}</span>
-          {service.description && <span className="card-description">{service.description}</span>}
-        </div>
+        {service.description && <span className="card-description">{service.description}</span>}
       </a>
     </div>
   );

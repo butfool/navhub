@@ -17,6 +17,7 @@ npm run build        # Production build into ../cmd/server/web/dist
 go build -o navhub ./cmd/server # Build binary
 go test ./...                   # Run tests (no test files currently exist)
 go vet ./...                    # Lint
+make hot                        # Hot-reload dev: Vite + Go (via air)
 
 # Docker
 docker build -t navhub .

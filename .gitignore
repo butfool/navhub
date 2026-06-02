@@ -30,3 +30,6 @@
 # Misc
 *.pem
 *.local
+
+# Go hot-reload (air)
+tmp/

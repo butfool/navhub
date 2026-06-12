@@ -1,19 +1,10 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
   SortableContext,
   rectSortingStrategy,
-  sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Service } from '../../types';
 import { getIconSvg } from '../../lib/icons';
@@ -33,9 +24,9 @@ interface CategorySectionProps {
   onDeleteCategory: (id: string) => void;
   onEditCategory: () => void;
   onAddService: () => void;
-  onServiceDragEnd: (categoryId: string, activeId: string, overId: string) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  isDropTarget?: boolean;
 }
 
 export function CategorySection({
@@ -52,33 +43,24 @@ export function CategorySection({
   onDeleteCategory,
   onEditCategory,
   onAddService,
-  onServiceDragEnd,
   onMoveUp,
   onMoveDown,
+  isDropTarget,
 }: CategorySectionProps) {
   const iconSvg = getIconSvg(icon);
   const stroke = rgbaToForeground(color);
   const isBrand = icon.startsWith('simple:');
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const { setNodeRef } = useDroppable({ id: `category-${id}` });
 
   const serviceIds = useMemo(() => services.map(s => s.id), [services]);
 
-  const handleServiceDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    onServiceDragEnd(id, active.id as string, over.id as string);
-  };
-
   return (
     <section
+      ref={setNodeRef}
       className="section-wrapper"
       data-edit-mode={editMode ? 'true' : 'false'}
+      data-drop-target={isDropTarget ? 'true' : 'false'}
       style={{ '--enter-index': index } as React.CSSProperties}
     >
       <div className="section-header">
@@ -117,42 +99,36 @@ export function CategorySection({
           </button>
         </div>
       </div>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleServiceDragEnd}
-      >
-        <SortableContext items={serviceIds} strategy={rectSortingStrategy}>
-          <div className="service-grid">
-            {services.map((svc, i) => (
-                <SortableServiceCard
-                  key={svc.id}
-                  service={svc}
-                  editMode={editMode}
-                  index={i}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
-              ))}
-            <button
-              type="button"
-              className="card card-add edit-only"
-              onClick={onAddService}
-              title="Add service"
-              tabIndex={editMode ? 0 : -1}
-              aria-hidden={!editMode}
-              style={{ '--enter-index': services.length } as React.CSSProperties}
-            >
-              <div className="card-add-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>
-                </svg>
-              </div>
-              <span className="card-add-text">Add service</span>
-            </button>
-          </div>
-        </SortableContext>
-      </DndContext>
+      <SortableContext items={serviceIds} strategy={rectSortingStrategy}>
+        <div className="service-grid">
+          {services.map((svc, i) => (
+              <SortableServiceCard
+                key={svc.id}
+                service={svc}
+                editMode={editMode}
+                index={i}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            ))}
+          <button
+            type="button"
+            className="card card-add edit-only"
+            onClick={onAddService}
+            title="Add service"
+            tabIndex={editMode ? 0 : -1}
+            aria-hidden={!editMode}
+            style={{ '--enter-index': services.length } as React.CSSProperties}
+          >
+            <div className="card-add-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>
+              </svg>
+            </div>
+            <span className="card-add-text">Add service</span>
+          </button>
+        </div>
+      </SortableContext>
     </section>
   );
 }

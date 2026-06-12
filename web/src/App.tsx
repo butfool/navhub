@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { DndContext, closestCenter } from '@dnd-kit/core';
 import { CategorySection } from './components/nav/CategorySection';
 import { Button } from './components/ui/button';
 import { ServiceModal } from './components/dialogs/ServiceModal';
 import { CategoryModal } from './components/dialogs/CategoryModal';
 import { useNavData } from './hooks/use-nav-data';
+import { useCrossCategoryDrag } from './hooks/use-cross-category-drag';
 import { useTheme } from './hooks/use-theme';
 import { Service, Category } from './types';
 
@@ -22,9 +24,14 @@ export default function App() {
     removeCategory,
     saveCategory,
     moveCategory,
-    reorderServices,
+    setCategories,
   } = useNavData();
   const { theme, changeTheme } = useTheme();
+  const { sensors, handleDragEnd, handleDragOver, draggingOverCategory } = useCrossCategoryDrag(categories);
+
+  const wrappedHandleDragEnd = useCallback((event: Parameters<typeof handleDragEnd>[0]) => {
+    handleDragEnd(event, setCategories);
+  }, [handleDragEnd, setCategories]);
   const [editMode, setEditMode] = useState(false);
   const [modal, setModal] = useState<ModalState>({ type: 'closed' });
   const [saving, setSaving] = useState(false);
@@ -133,7 +140,12 @@ export default function App() {
             </button>
           </div>
         ) : (
-          <>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={wrappedHandleDragEnd}
+            onDragOver={handleDragOver}
+          >
             {categoryData.map((category, index) => (
               <CategorySection
                 key={category.id}
@@ -150,12 +162,12 @@ export default function App() {
                 onDeleteCategory={handleDeleteCategory}
                 onEditCategory={() => setModal({ type: 'editCategory', category })}
                 onAddService={() => setModal({ type: 'editService', categoryId: category.id })}
-                onServiceDragEnd={reorderServices}
                 onMoveUp={() => handleMoveCategory(category.id, 'up')}
                 onMoveDown={() => handleMoveCategory(category.id, 'down')}
+                isDropTarget={draggingOverCategory === category.id}
               />
             ))}
-          </>
+          </DndContext>
         )}
         <div className="add-category-bar edit-only">
           <Button variant="secondary" onClick={() => setModal({ type: 'newCategory' })} tabIndex={editMode ? 0 : -1} aria-hidden={!editMode}>

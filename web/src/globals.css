@@ -85,6 +85,15 @@ body:has([data-dragging="true"]) .section-wrapper:not([data-dragging="true"]) {
     filter var(--dur-fast) ease;
 }
 
+/* Drop target highlight for cross-category drag */
+.section-wrapper[data-drop-target="true"] {
+  outline: 2px dashed var(--accent-violet);
+  outline-offset: 4px;
+  background: rgba(139, 92, 246, 0.05);
+  border-radius: var(--radius-md);
+  transition: outline-color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+
 /* Smooth theme switching: animate color-related props only (avoid transform). */
 html, body, .card, .island, .section-icon, .section-btn,
 .theme-btn, .drag-handle, .card-drag-handle, .card-action,

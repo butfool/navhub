@@ -119,6 +119,7 @@ export function useNavData() {
 
   return {
     categories,
+    setCategories,
     loading,
     saveService,
     removeService,
